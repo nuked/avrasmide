@@ -11,3 +11,22 @@
 *.lai
 *.la
 *.a
+
+# qmake generated things
+src/Makefile
+
+# automagically generated files
+src/application
+src/moc_arduinoconfiguration.cpp
+src/moc_avrasmfileparser.cpp
+src/moc_avrasmlexer.cpp
+src/moc_avrasmtoken.cpp
+src/moc_editorconfiguration.cpp
+src/moc_mainwindow.cpp
+src/moc_parameters.cpp
+src/moc_tooltipwidget.cpp
+src/qrc_application.cpp
+src/ui_arduinoconfiguration.h
+src/ui_editorconfiguration.h
+src/ui_parameters.h
+
