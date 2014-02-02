@@ -1,0 +1,17 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/copy.png</file>
+        <file>images/cut.png</file>
+        <file>images/new.png</file>
+        <file>images/open.png</file>
+        <file>images/paste.png</file>
+        <file>images/save.png</file>
+        <file>images/gears32.png</file>
+        <file>images/wrench32.png</file>
+        <file>images/arrow32.png</file>
+        <file>images/clean32.png</file>
+        <file>resources/keywords.api</file>
+        <file>resources/keywords.apix</file>
+        <file>images/buildandrun32.png</file>
+    </qresource>
+</RCC>
