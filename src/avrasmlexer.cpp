@@ -1,7 +1,7 @@
 /*
  *	avrasmlexer.cpp -- lexer for AVR assembler, done by calling nocc to dump the relevant tokens.
  *	Copyright (C) 2013 Gregoire Liglet and Florent Chiron, University of Kent.
- *	Copyright (C) 2013-2014 Fred Barnes, University of Kent <frmb@kent.ac.uk>
+ *	Copyright (C) 2013-2015 Fred Barnes, University of Kent <frmb@kent.ac.uk>
  *
  *	This program is free software; you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -37,15 +37,20 @@
 #include "Qsci/qsciapis.h"
 #include "Qsci/qsciscintillabase.h"
 
-#include "avrasmtoken.h"
+#ifdef USE_NOCC_LEXER
+	#include "avrasmtoken.h"
+#endif
+
 #include "language.h"
 #include "mainwindow.h"
 #include "parameters.h"
 #include "tooltipwidget.h"
 
-// Hold the name of the temporary file which will be created to contain the asm code and
-// given to nocc for lexing
-#define EDITOR_BUFFER_FILENAME ".__tmp_editor_content.asm"
+#ifdef USE_NOCC_LEXER
+	// Hold the name of the temporary file which will be created to contain the asm code and
+	// given to nocc for lexing
+	#define EDITOR_BUFFER_FILENAME ".__tmp_editor_content.asm"
+#endif
 
 
 /*{{{  AVRASMLexer::AVRASMLexer (QObject *parent) : QsciLexerCustom (parent)*/
@@ -60,8 +65,10 @@ AVRASMLexer::AVRASMLexer (QObject *parent) : QsciLexerCustom (parent)
 		qWarning () << "AVRASMLexer: parent is not an instance of QsciScintilla !";
 	}
 
+#ifdef USE_NOCC_LEXER
 	_tokensFile = NULL;
 	_tokenReader = NULL;
+#endif
 	_apisReady = false;
 	_tooltipWidget = new TooltipWidget (scintillaEditor);
 	_tooltipWidget->setAutoFillBackground (true);
@@ -74,6 +81,7 @@ AVRASMLexer::AVRASMLexer (QObject *parent) : QsciLexerCustom (parent)
 	connect (Parameters::getInstance().editorConfig(), SIGNAL (updateStyle()), SLOT (updateStyle()));
 }
 /*}}}*/
+#ifdef USE_NOCC_LEXER
 /*{{{  void AVRASMLexer::setNoccPath (const QString &path, const QString &specspath)*/
 /*
  *	sets the path to nocc (binary) *and* its specification file.
@@ -93,6 +101,7 @@ void AVRASMLexer::setParameters (Parameters *params)
 	_params = params;
 }
 /*}}}*/
+#endif
 
 
 // QsciLexer implementation
@@ -165,6 +174,8 @@ const char *AVRASMLexer::wordCharacters (void) const
  */
 void AVRASMLexer::styleText (int start, int end)
 {
+#if 1
+#else
 	QString tokensFileName = QDir::current().filePath ("tokens_dump");
 	QString editorContent = editor()->text();
 	QStringRef editorContentRef (&editorContent, start, end - start);
@@ -228,6 +239,7 @@ void AVRASMLexer::styleText (int start, int end)
 	if (_apisReady) {
 		editor()->autoCompleteFromAPIs ();
 	}
+#endif
 }
 /*}}}*/
 
@@ -270,6 +282,7 @@ void AVRASMLexer::updateStyle (void)
 }
 /*}}}*/
 
+#ifdef USE_NOCC_LEXER
 /*{{{  int AVRASMLexer::styleForToken (const AVRASMToken &token) const*/
 /*
  *	returns the style associated with a particular source token type
@@ -290,6 +303,8 @@ int AVRASMLexer::styleForToken (const AVRASMToken &token) const
 	return tokenTypesStyles.value (token.type (), 0);
 }
 /*}}}*/
+#endif
+
 /*{{{  bool AVRASMLexer::loadAPIs (void)*/
 /*
  *	loads the APIs -- keywords that scintilla uses for auto-completion.
@@ -319,6 +334,8 @@ bool AVRASMLexer::loadAPIs (void)
 	return true;
 }
 /*}}}*/
+
+#ifdef USE_NOCC_LEXER
 /*{{{  bool AVRASMLexer::tokenizeEditorContent (const QByteArray &content, const QString &tokensOutputFileName)*/
 /*
  *	puts edit buffer in a temporary file, then lex's it (with lexEditorContent) and removes the temporary file.
@@ -572,6 +589,8 @@ int AVRASMLexer::getTokenAbsoluteOffset (const AVRASMToken *token, int startLine
 	return absoluteOffset;
 }
 /*}}}*/
+#endif
+
 /*{{{  bool AVRASMLexer::eventFilter (QObject *qobj, QEvent *event)*/
 /*
  *	watches events in order to hide the tooltip.

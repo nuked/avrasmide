@@ -180,9 +180,11 @@ void MainWindow::initTextEdit (void)
 
 	_lexer = new AVRASMLexer (_textEdit);
 	//    QsciLexerCPP *lexer = new QsciLexerCPP(_textEdit);
+#ifdef USE_NOCC_LEXER
 	//check nocc here
 	_lexer->setNoccPath (_params->arduinoConfig()->noccPath (), _params->arduinoConfig()->noccSpecsPath ());
 	_lexer->setParameters (_params);
+#endif
 	_textEdit->setLexer (_lexer);
 	_textEdit->setMarginLineNumbers (1, true);
 	_textEdit->setMarginWidth (1, "-----");
@@ -207,7 +209,9 @@ void MainWindow::createOptionDialog (void)
  */
 void MainWindow::updateNoccPath (void)
 {
+#ifdef USE_NOCC_LEXER
 	_lexer->setNoccPath (_params->arduinoConfig()->noccPath (), _params->arduinoConfig()->noccSpecsPath ());
+#endif
 }
 
 /*}}}*/

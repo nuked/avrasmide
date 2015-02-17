@@ -1,0 +1,4 @@
+Note on Linux/i386, g++ version 4.9 fails to compile this stuff, so forcing some qmake stuff:
+
+qmake -spec linux-g++-4.8 -o Makefile application.pro
+

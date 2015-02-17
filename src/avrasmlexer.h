@@ -27,6 +27,9 @@
 
 #include "parameters.h"
 
+/* Note: turning this on causes the styler to use nocc for lexing: this is *not* fast on Windows */
+#undef USE_NOCC_LEXER
+
 class AVRASMToken;
 class QXmlStreamReader;
 class QFile;
@@ -38,8 +41,10 @@ Q_OBJECT
 public:
 	explicit AVRASMLexer (QObject *parent = 0);
 
+#ifdef USE_NOCC_LEXER
 	void setNoccPath (const QString &path, const QString &specspath);
 	void setParameters (Parameters *);
+#endif	/* USE_NOCC_LEXER */
 
 	// Inherited from QsciLexer
 	const char *language (void) const;
@@ -51,7 +56,9 @@ public:
 
 private slots:
 	void updateStyle (void);
+#ifdef USE_NOCC_LEXER
 	void noccRuntimeError (void);
+#endif
 
 private:
 	typedef enum StyleIdentifier {
@@ -66,10 +73,13 @@ private:
 	} StyleIdentifier;
 
 	void initStyles (void);
+#ifdef USE_NOCC_LEXER
 	int styleForToken (const AVRASMToken &token) const;
+#endif	/* USE_NOCC_LEXER */
 
 	bool loadAPIs (void);
 
+#ifdef USE_NOCC_LEXER
 	bool tokenizeEditorContent (const QByteArray &content, const QString &tokensOutputFileName);
 	QString copyEditorContentToTemporaryFile (const QByteArray &content);
 	int lexEditorContent (const QString &temporaryContentFileName, const QString &tokensOutputFileName);
@@ -78,6 +88,7 @@ private:
 	void destroyTokenReader ();
 	int whiteSpaceOffsetForLine (int line) const;
 	int getTokenAbsoluteOffset (const AVRASMToken *token, int startLine, int startColumn) const;
+#endif	/* USE_NOCC_LEXER */
 
 	bool eventFilter (QObject *object, QEvent *event);
 
@@ -85,10 +96,13 @@ private:
 	QStringList tooltipForOpcode (const QString &opcode) const;
 	QStringList tooltipForDirective (const QString &directive) const;
 
+#ifdef USE_NOCC_LEXER
 	QString _noccPath;
 	QString _noccSpecsPath;
 	QFile *_tokensFile;
 	QXmlStreamReader *_tokenReader;
+#endif	/* USE_NOCC_LEXER */
+
 	bool _apisReady;
 	TooltipWidget *_tooltipWidget;
 	QString _lastTooltipContext;

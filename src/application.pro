@@ -1,4 +1,5 @@
-CONFIG       += static release c++11
+CONFIG       += static release
+QMAKE_CXXFLAGS     += -std=c++11
 
 greaterThan(QT_MAJOR_VERSION, 4) {
     QT += widgets \
@@ -30,7 +31,7 @@ SOURCES       = main.cpp \
 
 RESOURCES     = application.qrc
 
-LIBS         += -L$$[QT_INSTALL_LIBS] -lqscintilla2
+LIBS         += -L$$[QT_INSTALL_LIBS] -lqt5scintilla2
 
 FORMS += \
     parameters.ui \
