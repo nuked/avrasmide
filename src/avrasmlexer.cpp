@@ -175,6 +175,12 @@ const char *AVRASMLexer::wordCharacters (void) const
 void AVRASMLexer::styleText (int start, int end)
 {
 #if 1
+	int offs = start;
+
+	startStyling (offs);
+
+	setStyling (end - offs, 0);
+
 #else
 	QString tokensFileName = QDir::current().filePath ("tokens_dump");
 	QString editorContent = editor()->text();
