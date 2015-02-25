@@ -175,9 +175,246 @@ const char *AVRASMLexer::wordCharacters (void) const
 void AVRASMLexer::styleText (int start, int end)
 {
 #if 1
+	QString editorContent = editor()->text();
+	QStringRef editorContentRef (&editorContent, start, end - start);
+	QByteArray l1chr = editorContentRef.toLatin1 ();
 	int offs = start;
+	int l1offs = 0;
+	int bol = 1;			/* assume we start scanning from a line start */
 
 	startStyling (offs);
+
+#if 0
+fprintf (stderr, "AVRASMLexer::styleText(): start=%d, end=%d\n", start, end);
+#endif
+	/* Note: call setStyling (N, STYLE) styles 'N' characters from the start/last-styling-end */
+	while (offs < end) {
+		int i;
+
+		/* skip over whitespace */
+		for (i=0; ((offs + i) < end) && ((l1chr[l1offs + i] == ' ') || (l1chr[l1offs + i] == '\t') || (l1chr[l1offs + i] == '\r')); i++);
+		if (i > 0) {
+			/* style whitespace */
+			setStyling (i, 0);
+			offs += i;
+			l1offs += i;
+		}
+		if (offs >= end) {
+			/* reached end-of-buffer */
+			break;			/* while() */
+		}
+
+		/* see what we've got here */
+		switch (l1chr[l1offs]) {
+		case '\n':
+			/*{{{  end-of-line*/
+			setStyling (1, 0);
+			offs++;
+			l1offs++;
+			bol = 1;
+			break;
+			/*}}}*/
+		case ';':
+			/*{{{  comment to end-of-line */
+			for (i=1; ((offs + i) < end) && (l1chr[l1offs + i] != '\n'); i++);
+			setStyling (i, StyleComment);
+			offs += i;
+			l1offs += i;
+			bol = 0;
+			break;
+			/*}}}*/
+		case '"':
+			/*{{{  looking for a string */
+			for (i=1; ((offs + i) < end); i++) {
+				if ((l1chr[l1offs+i] == '"') && (l1chr[l1offs+i-1] != '\\')) {
+					/* end-of-string here */
+					i++;
+					break;		/* for() */
+				} else if (l1chr[l1offs+i] == '\n') {
+					/* ran into end-of-line: assume end-of-string */
+					break;
+				}
+			}
+			setStyling (i, StyleString);
+			offs += i;
+			l1offs += i;
+			bol = 0;
+			break;
+			/*}}}*/
+		default:
+			/* something else */
+			if ((l1chr[l1offs] >= '0') && (l1chr[l1offs] <= '9')) {
+				/*{{{  probably a number*/
+				StyleIdentifier sty = StyleNumber;
+				int ishex = 0;
+				int isbin = ((l1chr[l1offs] == '0') || (l1chr[l1offs] == '1')) ? 1 : 0;
+
+				i = 1;
+				if (((offs + i) < end) && (l1chr[l1offs + i] == 'x')) {
+					/* probably a hexadecimal number */
+					ishex = 1;
+					isbin = 0;
+					i++;
+				}
+
+				/*{{{  scan through digits (move i along)*/
+				while ((offs + i) < end) {
+					char ch = l1chr[l1offs+i];
+
+					if ((ch >= '0') && (ch <= '9')) {
+						if (ch >= '2') {
+							/* not binary */
+							isbin = 0;
+						}
+						i++;
+					} else if (ishex && (ch >= 'a') && (ch <= 'f')) {
+						i++;
+					} else if (ishex && (ch >= 'A') && (ch <= 'F')) {
+						i++;
+					} else {
+						/* anything else, stop and look */
+						break;		/* while() */
+					}
+				}
+				/*}}}*/
+
+				/* see if it was a forward/backward label reference (0b, 2f, etc.) */
+				if (((offs + i) < end) && !ishex && !isbin && ((l1chr[l1offs+i] == 'b') || (l1chr[l1offs+i] == 'f'))) {
+					/* assume it is */
+					i++;
+					sty = StyleSymbol;
+				} else if (((offs + i) < end) && !ishex && isbin && (l1chr[l1offs+i] == 'f')) {
+					/* assume it is again */
+					i++;
+					sty = StyleSymbol;
+					isbin = 0;
+				} else if (((offs + i) < end) && isbin && (l1chr[l1offs+i] == 'b')) {
+					/* assume binary number */
+					i++;
+				}
+
+				/* anything left that isn't whitespace/etc. is garbage! */
+				setStyling (i, sty);
+				offs += i;
+				l1offs += i;
+
+				for (i=0; ((offs + i) < end) && ((l1chr[l1offs+i] == '_') || ((l1chr[l1offs+i] >= '0') && (l1chr[l1offs+i] <= '9')) ||
+						((l1chr[l1offs+i] >= 'a') && (l1chr[l1offs+i] <= 'z')) || ((l1chr[l1offs+i] >= 'A') && (l1chr[l1offs+i] <= 'Z'))); i++);
+				if (i > 0) {
+					/* some garbage */
+					setStyling (i, 0);
+					offs += i;
+					l1offs += i;
+				}
+				/*}}}*/
+			} else if ((l1chr[l1offs] >= 'a') && (l1chr[l1offs] <= 'z')) {
+				/*{{{  probably keyword, name or symbol*/
+				/* scoop up characters */
+				char kbuf[64];
+
+				for (i=0; ((offs + i) < end) && (i < 63) && ((l1chr[l1offs+i] == '_') || ((l1chr[l1offs+i] >= '0') && (l1chr[l1offs+i] <= '9')) ||
+						((l1chr[l1offs+i] >= 'a') && (l1chr[l1offs+i] <= 'z')) || ((l1chr[l1offs+i] >= 'A') && (l1chr[l1offs+i] <= 'Z'))); i++) {
+					kbuf[i] = l1chr[l1offs+i];
+				}
+				kbuf[i] = '\0';
+
+				if (bol && ((offs+i) < end) && (l1chr[l1offs+i] == ':')) {
+					/* symbol */
+					i++;
+					setStyling (i, StyleSymbol);
+					offs += i;
+					l1offs += i;
+				} else {
+					QString tmp (kbuf);
+
+					/* see if it's in the keyword stuff */
+					if (AVRASMKeywords.contains (tmp)) {
+						/* yes :) */
+						setStyling (i, StyleKeyword);
+						offs += i;
+						l1offs += i;
+					} else {
+						/* assume name */
+						setStyling (i, StyleName);
+						offs += i;
+						l1offs += i;
+					}
+				}
+				/*}}}*/
+			} else if (l1chr[l1offs] == '.') {
+				/*{{{  probably an assembler directive or local label*/
+				/* scoop up characters */
+				char kbuf[64];
+				int islab = 0;
+
+				kbuf[0] = l1chr[l1offs];
+				for (i=1; ((offs + i) < end) && (i < 63) && ((l1chr[l1offs+i] == '_') || ((l1chr[l1offs+i] >= '0') && (l1chr[l1offs+i] <= '9')) ||
+						((l1chr[l1offs+i] >= 'a') && (l1chr[l1offs+i] <= 'z')) || ((l1chr[l1offs+i] >= 'A') && (l1chr[l1offs+i] <= 'Z'))); i++) {
+					kbuf[i] = l1chr[l1offs+i];
+				}
+				kbuf[i] = '\0';
+
+				if (bol && (i > 1) && (kbuf[1] == 'L')) {
+					/* might be local label */
+					int j;
+
+					islab = 1;
+					for (j=2; (j<i) && (kbuf[j] >= '0') && (kbuf[j] <= '9'); j++);
+					if (j < i) {
+						islab = 0;
+					} else if (((offs + i) < end) && (l1chr[l1offs + i] == ':')) {
+						/* definitely is a local label */
+						islab = 1;
+					} else {
+						/* something else */
+						islab = 0;
+					}
+				}
+
+				if (islab) {
+					setStyling (i, StyleSymbol);
+					offs += i;
+					l1offs += i;
+				} else {
+					QString tmp (kbuf);
+
+					/* see if it's in the keyword stuff */
+					if (DirectivesInfo.contains (tmp)) {
+						/* yes :) */
+						setStyling (i, StyleSpecial);
+						offs += i;
+						l1offs += i;
+					} else {
+						/* assume nothing */
+						setStyling (i, StyleDefault);
+						offs += i;
+						l1offs += i;
+					}
+				}
+
+				/*}}}*/
+			} else if ((l1chr[l1offs] >= 'A') && (l1chr[l1offs] <= 'Z')) {
+				/*{{{  probably name or symbol (label)*/
+				for (i=1; ((offs + i) < end) && ((l1chr[l1offs+i] == '_') || ((l1chr[l1offs+i] >= '0') && (l1chr[l1offs+i] <= '9')) ||
+						((l1chr[l1offs+i] >= 'a') && (l1chr[l1offs+i] <= 'z')) || ((l1chr[l1offs+i] >= 'A') && (l1chr[l1offs+i] <= 'Z'))); i++);
+				if (bol && ((offs + i) < end) && (l1chr[l1offs+i] == ':')) {
+					i++;
+					setStyling (i, StyleSymbol);
+				} else {
+					setStyling (i, StyleName);
+				}
+				offs += i;
+				l1offs += i;
+				/*}}}*/
+			} else {
+				setStyling (1, 0);
+				offs++;
+				l1offs++;
+			}
+			bol = 0;
+			break;
+		}
+	}
 
 	setStyling (end - offs, 0);
 
